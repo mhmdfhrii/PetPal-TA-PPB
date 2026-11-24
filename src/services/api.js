@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
-const BASE_URL = 'http://192.168.18.197:5000/api';
+const BASE_URL = 'https://pet-pal-ta-ppb-olive.vercel.app/api';
 
 // ========================================
 // HELPER RESPONSE
