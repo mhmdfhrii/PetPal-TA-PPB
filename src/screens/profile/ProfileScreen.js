@@ -24,7 +24,7 @@ import { supabase } from '../../config/supabase';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshProfile } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -248,6 +248,9 @@ export default function ProfileScreen({ navigation }) {
       if (profileError) throw profileError;
 
       setAvatarUrl(newAvatarUrl);
+      if (refreshProfile) {
+        await refreshProfile(user.id);
+      }
 
       Alert.alert('Berhasil', 'Foto profil berhasil diperbarui.');
     } catch (error) {
@@ -318,6 +321,10 @@ export default function ProfileScreen({ navigation }) {
       setName(tempName.trim());
       setPhone(tempPhone.trim());
       setAddress(tempAddress.trim());
+
+      if (refreshProfile) {
+        await refreshProfile(user.id);
+      }
 
       if (newEmail === currentEmail) {
         setEmail(newEmail);
@@ -548,12 +555,7 @@ export default function ProfileScreen({ navigation }) {
             <MenuItem
               icon="help-circle-outline"
               title="Help & Support"
-              onPress={() =>
-                Alert.alert(
-                  'Help & Support',
-                  'Fitur bantuan akan tersedia pada pengembangan berikutnya.'
-                )
-              }
+              onPress={() => navigation.navigate('HelpSupport')}
             />
           </View>
         </View>

@@ -235,6 +235,38 @@ export default function AnimalDetailScreen({ navigation, route }) {
             </Text>
           </View>
 
+          {animal.shelters && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Shelter Penampungan</Text>
+              <TouchableOpacity
+                style={styles.shelterCard}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('ShelterDetail', {
+                    shelter: animal.shelters,
+                  })
+                }
+              >
+                <View style={styles.shelterIconBox}>
+                  <Ionicons name="business" size={22} color={COLORS.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.shelterCardName}>
+                    {animal.shelters.name}
+                  </Text>
+                  <Text style={styles.shelterCardLocation}>
+                    📍 {animal.shelters.location || animal.location}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={COLORS.gray}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.noteCard}>
             <Ionicons
               name="heart"
@@ -489,5 +521,31 @@ const styles = StyleSheet.create({
   backToListText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  shelterCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary,
+    padding: 14,
+    borderRadius: 14,
+    gap: 12,
+  },
+  shelterIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#FFF0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shelterCardName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  shelterCardLocation: {
+    fontSize: 11,
+    color: COLORS.gray,
+    marginTop: 2,
   },
 });

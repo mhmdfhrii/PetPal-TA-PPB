@@ -1,5 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   View,
@@ -48,7 +49,7 @@ export default function ShelterScreen({ navigation }) {
           shelter.description || 'No description available.',
         phone: shelter.contact || '-',
         address: shelter.location || '-',
-        pets: 0,
+        pets: shelter.pets_count !== undefined ? shelter.pets_count : 0,
         facilities: [],
       }));
 
@@ -61,9 +62,11 @@ export default function ShelterScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    fetchShelters();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchShelters();
+    }, [])
+  );
 
   // Fitur pencarian shelter
   const filteredShelters = shelters.filter((shelter) => {

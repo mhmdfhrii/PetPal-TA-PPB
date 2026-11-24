@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import {
   View,
@@ -11,12 +11,14 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 
 import {
   Ionicons,
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   getAnimals,
@@ -24,6 +26,7 @@ import {
 } from '../../services/api';
 
 import { useFavorites } from '../../context/FavoritesContext';
+import { useAuth } from '../../context/AuthContext';
 
 // =================================
 // COLORS
@@ -54,8 +57,19 @@ const CATEGORIES = [
 // =================================
 
 export default function HomeScreen({ navigation }) {
+  const { profile, refreshProfile } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('Dog');
   const [search, setSearch] = useState('');
+
+  // FILTER MODAL STATE
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [appliedShelterLocation, setAppliedShelterLocation] = useState('All');
+  const [appliedShelterSort, setAppliedShelterSort] = useState('default');
+
+  // TEMPORARY FILTER STATE FOR MODAL
+  const [tempCategory, setTempCategory] = useState('Dog');
+  const [tempShelterLocation, setTempShelterLocation] = useState('All');
+  const [tempShelterSort, setTempShelterSort] = useState('default');
 
   // FAVORITES CONTEXT
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -123,7 +137,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   // =================================
-  // LOAD DATA
+  // LOAD DATA & SYNC PROFILE
   // =================================
 
   useEffect(() => {
@@ -131,24 +145,122 @@ export default function HomeScreen({ navigation }) {
     fetchShelters();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (refreshProfile) {
+        refreshProfile();
+      }
+    }, [refreshProfile])
+  );
+
   // =================================
-  // SEARCH AND CATEGORY FILTER
+  // DYNAMIC CATEGORIES & LOCATIONS
+  // =================================
+
+  const availableCategories = ['All', 'Dog', 'Cat', 'Rabbit', 'Bird'];
+  pets.forEach((pet) => {
+    if (
+      pet.category &&
+      !availableCategories.some(
+        (c) => c.toLowerCase() === pet.category.toLowerCase()
+      )
+    ) {
+      availableCategories.push(pet.category);
+    }
+  });
+
+  const availableShelterLocations = ['All'];
+  shelters.forEach((shelter) => {
+    if (shelter.location) {
+      const loc = shelter.location.trim();
+      if (
+        loc &&
+        !availableShelterLocations.some(
+          (l) => l.toLowerCase() === loc.toLowerCase()
+        )
+      ) {
+        availableShelterLocations.push(loc);
+      }
+    }
+  });
+
+  // =================================
+  // FILTER MODAL HANDLERS
+  // =================================
+
+  const openFilterModal = () => {
+    setTempCategory(selectedCategory);
+    setTempShelterLocation(appliedShelterLocation);
+    setTempShelterSort(appliedShelterSort);
+    setFilterModalVisible(true);
+  };
+
+  const applyFilters = () => {
+    setSelectedCategory(tempCategory);
+    setAppliedShelterLocation(tempShelterLocation);
+    setAppliedShelterSort(tempShelterSort);
+    setFilterModalVisible(false);
+  };
+
+  const resetFilters = () => {
+    setTempCategory('All');
+    setTempShelterLocation('All');
+    setTempShelterSort('default');
+    setSelectedCategory('All');
+    setAppliedShelterLocation('All');
+    setAppliedShelterSort('default');
+    setSearch('');
+    setFilterModalVisible(false);
+  };
+
+  const isFilterActive =
+    selectedCategory !== 'All' ||
+    appliedShelterLocation !== 'All' ||
+    appliedShelterSort !== 'default';
+
+  // =================================
+  // SEARCH AND CATEGORY FILTER (PETS)
   // =================================
 
   const filteredPets = pets.filter((pet) => {
     const keyword = search.trim().toLowerCase();
 
     const matchesCategory =
-      keyword !== '' ||
       selectedCategory === 'All' ||
-      pet.category === selectedCategory;
+      (pet.category || '').toLowerCase() === selectedCategory.toLowerCase();
 
     const matchesSearch =
+      keyword === '' ||
       (pet.name || '').toLowerCase().includes(keyword) ||
       (pet.breed || '').toLowerCase().includes(keyword);
 
     return matchesCategory && matchesSearch;
   });
+
+  // =================================
+  // SHELTER FILTER & SORT
+  // =================================
+
+  const filteredShelters = shelters
+    .filter((shelter) => {
+      if (appliedShelterLocation && appliedShelterLocation !== 'All') {
+        const shelterLoc = (shelter.location || '').toLowerCase();
+        const targetLoc = appliedShelterLocation.toLowerCase();
+        if (!shelterLoc.includes(targetLoc)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (appliedShelterSort === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (appliedShelterSort === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      return 0;
+    });
 
   // =================================
   // NAVIGATION
@@ -186,40 +298,34 @@ export default function HomeScreen({ navigation }) {
         {/* HEADER */}
 
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>
-              Hello, Pet Lover 👋
+              Hello, {profile?.full_name?.split(' ')[0] || 'Pet Lover'} 👋
             </Text>
 
             <Text style={styles.welcome}>
               Find your new best friend!
             </Text>
-
-            <TouchableOpacity style={styles.location}>
-              <Ionicons
-                name="location"
-                size={15}
-                color={COLORS.accent}
-              />
-
-              <Text style={styles.locationText}>
-                Semarang, Indonesia
-              </Text>
-
-              <Ionicons
-                name="chevron-down"
-                size={14}
-                color={COLORS.gray}
-              />
-            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.avatar}>
-            <Ionicons
-              name="person"
-              size={26}
-              color={COLORS.primary}
-            />
+          <TouchableOpacity
+            style={styles.avatar}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons
+                name="person"
+                size={24}
+                color={COLORS.primary}
+              />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -250,14 +356,81 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity onPress={openAnimals}>
+          <TouchableOpacity
+            onPress={openFilterModal}
+            style={styles.filterButtonTrigger}
+            activeOpacity={0.7}
+          >
             <Ionicons
               name="options-outline"
               size={22}
-              color={COLORS.primary}
+              color={isFilterActive ? COLORS.accent : COLORS.primary}
             />
+            {isFilterActive && <View style={styles.filterActiveDot} />}
           </TouchableOpacity>
         </View>
+
+        {/* ACTIVE FILTER BADGES */}
+        {isFilterActive && (
+          <View style={styles.activeFiltersContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.activeFiltersList}
+            >
+              <Text style={styles.activeFilterTitle}>Filter Aktif:</Text>
+
+              {selectedCategory !== 'All' && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>
+                    Kategori: {selectedCategory}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setSelectedCategory('All')}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons name="close" size={13} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {appliedShelterLocation !== 'All' && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>
+                    Lokasi: {appliedShelterLocation}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAppliedShelterLocation('All')}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons name="close" size={13} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {appliedShelterSort !== 'default' && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>
+                    Urut: {appliedShelterSort === 'name_asc' ? 'A-Z' : 'Z-A'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAppliedShelterSort('default')}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Ionicons name="close" size={13} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={resetFilters}
+                style={styles.resetFilterButton}
+              >
+                <Text style={styles.resetFilterText}>Reset Semua</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
 
         {/* CATEGORIES */}
 
@@ -566,9 +739,9 @@ export default function HomeScreen({ navigation }) {
 
         {!loadingShelters &&
           errorShelters === '' &&
-          shelters.length > 0 && (
+          filteredShelters.length > 0 && (
             <View style={styles.shelterList}>
-              {shelters.map((shelter) => (
+              {filteredShelters.map((shelter) => (
                 <TouchableOpacity
                   key={shelter.id}
                   style={styles.shelterCard}
@@ -629,7 +802,7 @@ export default function HomeScreen({ navigation }) {
 
         {!loadingShelters &&
           errorShelters === '' &&
-          shelters.length === 0 && (
+          filteredShelters.length === 0 && (
             <View style={styles.emptyState}>
               <Ionicons
                 name="home-outline"
@@ -638,7 +811,7 @@ export default function HomeScreen({ navigation }) {
               />
 
               <Text style={styles.emptyText}>
-                No shelters available.
+                No shelters found matching criteria.
               </Text>
             </View>
           )}
@@ -658,6 +831,162 @@ export default function HomeScreen({ navigation }) {
         </View>
 
       </ScrollView>
+
+      {/* FILTER & SORT MODAL POPUP */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* MODAL HEADER */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderTitleBox}>
+                <Text style={styles.modalTitle}>Filter & Urutkan</Text>
+                <Text style={styles.modalSubtitle}>
+                  Sesuaikan hewan dan shelter yang ingin dicari
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={22} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalBody}
+            >
+              {/* FILTER KATEGORI HEWAN */}
+              <Text style={styles.filterSectionTitle}>Kategori Hewan</Text>
+              <View style={styles.filterPillsRow}>
+                {availableCategories.map((cat) => {
+                  const isSelected =
+                    tempCategory.toLowerCase() === cat.toLowerCase();
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.filterPill,
+                        isSelected && styles.filterPillActive,
+                      ]}
+                      onPress={() => setTempCategory(cat)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.filterPillText,
+                          isSelected && styles.filterPillTextActive,
+                        ]}
+                      >
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* FILTER LOKASI SHELTER */}
+              <Text style={styles.filterSectionTitle}>Lokasi Shelter</Text>
+              <Text style={styles.filterSectionDescription}>
+                Pilih lokasi berdasarkan shelter yang tersedia:
+              </Text>
+              <View style={styles.filterPillsRow}>
+                {availableShelterLocations.map((loc) => {
+                  const isSelected =
+                    tempShelterLocation.toLowerCase() === loc.toLowerCase();
+                  return (
+                    <TouchableOpacity
+                      key={loc}
+                      style={[
+                        styles.filterPill,
+                        isSelected && styles.filterPillActive,
+                      ]}
+                      onPress={() => setTempShelterLocation(loc)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name="location-outline"
+                        size={13}
+                        color={isSelected ? '#FFFFFF' : COLORS.gray}
+                        style={{ marginRight: 3 }}
+                      />
+                      <Text
+                        style={[
+                          styles.filterPillText,
+                          isSelected && styles.filterPillTextActive,
+                        ]}
+                      >
+                        {loc}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* URUTAN SHELTER */}
+              <Text style={styles.filterSectionTitle}>Urutkan Shelter</Text>
+              <View style={styles.filterPillsRow}>
+                {[
+                  { label: 'Default', value: 'default' },
+                  { label: 'Nama A - Z', value: 'name_asc' },
+                  { label: 'Nama Z - A', value: 'name_desc' },
+                ].map((sortItem) => {
+                  const isSelected = tempShelterSort === sortItem.value;
+                  return (
+                    <TouchableOpacity
+                      key={sortItem.value}
+                      style={[
+                        styles.filterPill,
+                        isSelected && styles.filterPillActive,
+                      ]}
+                      onPress={() => setTempShelterSort(sortItem.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.filterPillText,
+                          isSelected && styles.filterPillTextActive,
+                        ]}
+                      >
+                        {sortItem.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {/* MODAL FOOTER */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.modalResetButton}
+                onPress={() => {
+                  setTempCategory('All');
+                  setTempShelterLocation('All');
+                  setTempShelterSort('default');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalResetText}>Reset</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalApplyButton}
+                onPress={applyFilters}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalApplyText}>Terapkan Filter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -682,13 +1011,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 22,
-    marginBottom: 25,
+    marginBottom: 20,
+  },
+
+  headerTextContainer: {
+    flex: 1,
+    paddingRight: 15,
   },
 
   greeting: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.gray,
-    marginBottom: 5,
+    marginBottom: 4,
+    fontWeight: '500',
   },
 
   welcome: {
@@ -697,36 +1032,96 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  location: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 5,
-  },
-
-  locationText: {
-    fontSize: 12,
-    color: COLORS.gray,
-  },
-
   avatar: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     backgroundColor: COLORS.secondary,
-    borderRadius: 25,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#EEEEEE',
+  },
+
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 23,
   },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 53,
+    height: 52,
     backgroundColor: COLORS.secondary,
     borderRadius: 14,
     marginHorizontal: 22,
     paddingHorizontal: 15,
-    marginBottom: 27,
+    marginBottom: 16,
+  },
+
+  filterButtonTrigger: {
+    position: 'relative',
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  filterActiveDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.accent,
+  },
+
+  activeFiltersContainer: {
+    marginBottom: 18,
+  },
+
+  activeFiltersList: {
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  activeFilterTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.gray,
+    marginRight: 2,
+  },
+
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 5,
+  },
+
+  activeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  resetFilterButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: '#EEEEEE',
+  },
+
+  resetFilterText: {
+    fontSize: 11,
+    color: '#666666',
+    fontWeight: '600',
   },
 
   searchInput: {
@@ -985,5 +1380,155 @@ const styles = StyleSheet.create({
   footerText: {
     color: COLORS.gray,
     fontSize: 11,
+  },
+
+  // MODAL STYLES
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '82%',
+    paddingBottom: 25,
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+
+  modalHeaderTitleBox: {
+    flex: 1,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+
+  modalSubtitle: {
+    fontSize: 12,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
+
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  modalBody: {
+    paddingHorizontal: 22,
+    paddingTop: 15,
+    paddingBottom: 20,
+  },
+
+  filterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+
+  filterSectionDescription: {
+    fontSize: 12,
+    color: COLORS.gray,
+    marginBottom: 10,
+  },
+
+  filterPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: COLORS.secondary,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+
+  filterPillActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+
+  filterPillText: {
+    fontSize: 12,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+
+  filterPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  modalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+
+  modalResetButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#DDDDDD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalResetText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.gray,
+  },
+
+  modalApplyButton: {
+    flex: 2,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+
+  modalApplyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

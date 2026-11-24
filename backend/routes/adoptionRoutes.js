@@ -64,19 +64,29 @@ router.patch(
       const { id } = req.params;
       const { status } = req.body;
 
-      const allowedStatuses = ['pending', 'approved', 'rejected'];
+      // Evaluasi alur status adopsi lengkap:
+      // pending -> approved -> completed
+      // atau rejected / cancelled
+      const allowedStatuses = [
+        'pending',
+        'approved',
+        'rejected',
+        'completed',
+        'cancelled',
+      ];
 
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
           status: 'error',
-          message: 'Status pengajuan tidak valid.',
+          message:
+            'Status pengajuan tidak valid. Pilihan: pending, approved, rejected, completed, cancelled.',
         });
       }
 
       const { data: existingRequest, error: findError } =
         await supabase
           .from('adoption_requests')
-          .select('id')
+          .select('id, animal_id, status')
           .eq('id', id)
           .maybeSingle();
 
@@ -89,6 +99,9 @@ router.patch(
         });
       }
 
+      const oldStatus = existingRequest.status;
+
+      // Update status pengajuan
       const { data, error } = await supabase
         .from('adoption_requests')
         .update({ status })
@@ -100,12 +113,41 @@ router.patch(
             name,
             breed,
             category,
-            image_url
+            image_url,
+            is_available
           )
         `)
         .single();
 
       if (error) throw error;
+
+      // SINKRONISASI KETERSEDIAAN HEWAN (animals.is_available):
+      // Jika status menjadi approved atau completed, hewan tidak lagi tersedia untuk diadopsi
+      if (status === 'approved' || status === 'completed') {
+        await supabase
+          .from('animals')
+          .update({ is_available: false })
+          .eq('id', existingRequest.animal_id);
+      } else if (
+        (oldStatus === 'approved' || oldStatus === 'completed') &&
+        ['pending', 'rejected', 'cancelled'].includes(status)
+      ) {
+        // Jika status dibatalkan / ditolak kembali dan tidak ada adopsi approved/completed lain,
+        // kembalikan status hewan menjadi tersedia (is_available = true)
+        const { data: otherApproved } = await supabase
+          .from('adoption_requests')
+          .select('id')
+          .eq('animal_id', existingRequest.animal_id)
+          .neq('id', id)
+          .in('status', ['approved', 'completed']);
+
+        if (!otherApproved || otherApproved.length === 0) {
+          await supabase
+            .from('animals')
+            .update({ is_available: true })
+            .eq('id', existingRequest.animal_id);
+        }
+      }
 
       return res.json({
         status: 'success',
@@ -136,20 +178,43 @@ router.delete(
     try {
       const { id } = req.params;
 
-      const { data, error } = await supabase
+      // Dapatkan data sebelum dihapus untuk sinkronisasi is_available
+      const { data: requestToDelete, error: getError } = await supabase
         .from('adoption_requests')
-        .delete()
+        .select('id, animal_id, status')
         .eq('id', id)
-        .select('id')
         .maybeSingle();
 
-      if (error) throw error;
+      if (getError) throw getError;
 
-      if (!data) {
+      if (!requestToDelete) {
         return res.status(404).json({
           status: 'error',
           message: 'Pengajuan adopsi tidak ditemukan.',
         });
+      }
+
+      const { error } = await supabase
+        .from('adoption_requests')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Jika pengajuan yang dihapus berstatus approved/completed, periksa apakah hewan bisa tersedia kembali
+      if (['approved', 'completed'].includes(requestToDelete.status)) {
+        const { data: remainingApproved } = await supabase
+          .from('adoption_requests')
+          .select('id')
+          .eq('animal_id', requestToDelete.animal_id)
+          .in('status', ['approved', 'completed']);
+
+        if (!remainingApproved || remainingApproved.length === 0) {
+          await supabase
+            .from('animals')
+            .update({ is_available: true })
+            .eq('id', requestToDelete.animal_id);
+        }
       }
 
       return res.json({
@@ -242,6 +307,25 @@ router.post('/', authenticateUser, async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Hewan ini sudah tidak tersedia untuk diadopsi.',
+      });
+    }
+
+    // Periksa apakah user sudah memiliki pengajuan pending untuk hewan ini
+    const { data: existingPending, error: pendingCheckError } = await supabase
+      .from('adoption_requests')
+      .select('id')
+      .eq('animal_id', Number(animal_id))
+      .eq('applicant_user_id', userId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (pendingCheckError) throw pendingCheckError;
+
+    if (existingPending) {
+      return res.status(400).json({
+        status: 'error',
+        message:
+          'Kamu sudah memiliki pengajuan yang sedang menunggu verifikasi untuk hewan ini.',
       });
     }
 

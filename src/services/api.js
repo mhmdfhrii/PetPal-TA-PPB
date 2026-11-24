@@ -417,3 +417,45 @@ export const updateUserRole = async (
 
   return parseResponse(response);
 };
+
+// ========================================
+// USER: UPLOAD PET
+// ========================================
+
+export const uploadPet = async (animalData, image, accessToken) => {
+  if (!image?.uri) {
+    throw new Error('Foto hewan wajib dipilih.');
+  }
+
+  const mimeType = image.mimeType || 'image/jpeg';
+  const parameters = {};
+
+  Object.keys(animalData).forEach((key) => {
+    if (animalData[key] !== undefined && animalData[key] !== null) {
+      parameters[key] = String(animalData[key]);
+    }
+  });
+
+  const headers = accessToken ? getAuthHeaders(accessToken) : {};
+
+  const response = await FileSystem.uploadAsync(
+    `${BASE_URL}/animals/upload`,
+    image.uri,
+    {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'image',
+      mimeType,
+      parameters,
+      headers,
+    }
+  );
+
+  const result = JSON.parse(response.body);
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(result.message || 'Gagal mengunggah data hewan.');
+  }
+
+  return result;
+};

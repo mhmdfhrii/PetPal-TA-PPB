@@ -103,12 +103,45 @@ const deleteAnimalImage = async (imageUrl) => {
 
 router.get('/', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { shelter_id } = req.query;
+
+    let query = supabase
       .from('animals')
-      .select('*')
+      .select('*, shelters (id, name, location, contact, image_url)')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (shelter_id) {
+      query = query.eq('shelter_id', Number(shelter_id));
+    }
+
+    const { data, error } = await query;
+
+    // Fallback jika relasi shelters belum ada di database
+    if (error) {
+      console.warn(
+        'Get Animals join error, falling back to basic query:',
+        error.message
+      );
+
+      let fallbackQuery = supabase
+        .from('animals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (shelter_id) {
+        fallbackQuery = fallbackQuery.eq('shelter_id', Number(shelter_id));
+      }
+
+      const { data: fallbackData, error: fallbackError } =
+        await fallbackQuery;
+
+      if (fallbackError) throw fallbackError;
+
+      return res.status(200).json({
+        status: 'success',
+        data: fallbackData,
+      });
+    }
 
     return res.status(200).json({
       status: 'success',
@@ -147,6 +180,7 @@ router.post(
         location,
         description,
         is_available,
+        shelter_id,
       } = req.body;
 
       if (
@@ -186,6 +220,10 @@ router.post(
           is_available === undefined
             ? true
             : is_available === 'true' || is_available === true,
+        shelter_id:
+          shelter_id && shelter_id !== 'null' && shelter_id !== ''
+            ? Number(shelter_id)
+            : null,
       };
 
       const { data, error } = await supabase
@@ -242,6 +280,7 @@ router.put(
         location,
         description,
         is_available,
+        shelter_id,
       } = req.body;
 
       const { data: existingAnimal, error: findError } = await supabase
@@ -274,6 +313,13 @@ router.put(
       if (is_available !== undefined) {
         updateData.is_available =
           is_available === 'true' || is_available === true;
+      }
+
+      if (shelter_id !== undefined) {
+        updateData.shelter_id =
+          shelter_id && shelter_id !== 'null' && shelter_id !== ''
+            ? Number(shelter_id)
+            : null;
       }
 
       if (req.file) {
@@ -373,83 +419,93 @@ router.delete(
 // POST /api/animals/upload
 // ========================================
 
-router.post('/upload', upload.single('image'), async (req, res) => {
-  let uploadedImageUrl = null;
+router.post(
+  '/upload',
+  authenticateUser,
+  upload.single('image'),
+  async (req, res) => {
+    let uploadedImageUrl = null;
 
-  try {
-    const {
-      name,
-      breed,
-      category,
-      age,
-      gender,
-      location,
-      description,
-    } = req.body;
+    try {
+      const {
+        name,
+        breed,
+        category,
+        age,
+        gender,
+        location,
+        description,
+        shelter_id,
+      } = req.body;
 
-    if (
-      !name ||
-      !breed ||
-      !category ||
-      !age ||
-      !gender ||
-      !location ||
-      !description
-    ) {
-      return res.status(400).json({
+      if (
+        !name ||
+        !breed ||
+        !category ||
+        !age ||
+        !gender ||
+        !location ||
+        !description
+      ) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Semua informasi hewan wajib diisi.',
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Foto hewan wajib diunggah.',
+        });
+      }
+
+      uploadedImageUrl = await uploadAnimalImage(req.file);
+
+      const animalData = {
+        name,
+        breed,
+        category,
+        age,
+        gender,
+        location,
+        description,
+        image_url: uploadedImageUrl,
+        is_available: true,
+        shelter_id:
+          shelter_id && shelter_id !== 'null' && shelter_id !== ''
+            ? Number(shelter_id)
+            : null,
+      };
+
+      const { data, error } = await supabase
+        .from('animals')
+        .insert([animalData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return res.status(201).json({
+        status: 'success',
+        message: 'Data hewan berhasil dikirim.',
+        data,
+      });
+    } catch (error) {
+      console.error('User Upload Animal Error:', error);
+
+      if (uploadedImageUrl) {
+        await deleteAnimalImage(uploadedImageUrl);
+      }
+
+      return res.status(500).json({
         status: 'error',
-        message: 'Semua informasi hewan wajib diisi.',
+        message: 'Gagal mengirim data hewan.',
+        detail: error.message,
       });
     }
-
-    if (!req.file) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Foto hewan wajib diunggah.',
-      });
-    }
-
-    uploadedImageUrl = await uploadAnimalImage(req.file);
-
-    const { data, error } = await supabase
-      .from('animals')
-      .insert([
-        {
-          name,
-          breed,
-          category,
-          age,
-          gender,
-          location,
-          description,
-          image_url: uploadedImageUrl,
-          is_available: true,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return res.status(201).json({
-      status: 'success',
-      message: 'Data hewan berhasil dikirim.',
-      data,
-    });
-  } catch (error) {
-    console.error('User Upload Animal Error:', error);
-
-    if (uploadedImageUrl) {
-      await deleteAnimalImage(uploadedImageUrl);
-    }
-
-    return res.status(500).json({
-      status: 'error',
-      message: 'Gagal mengirim data hewan.',
-      detail: error.message,
-    });
   }
-});
+);
 
 // ========================================
 // GET DETAIL HEWAN
@@ -460,18 +516,42 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('animals')
-      .select('*')
+      .select('*, shelters (id, name, location, contact, image_url)')
       .eq('id', id)
       .single();
 
+    // Fallback jika relasi shelters belum ada
     if (error) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Data hewan tidak ditemukan.',
-      });
+      const fallback = await supabase
+        .from('animals')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fallback.error || !fallback.data) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Data hewan tidak ditemukan.',
+        });
+      }
+      data = fallback.data;
     }
+
+    return res.status(200).json({
+      status: 'success',
+      data,
+    });
+  } catch (error) {
+    console.error('Get Animal Detail Error:', error);
+
+    return res.status(500).json({
+      status: 'error',
+      message: 'Gagal mengambil detail hewan.',
+    });
+  }
+});
 
     return res.status(200).json({
       status: 'success',

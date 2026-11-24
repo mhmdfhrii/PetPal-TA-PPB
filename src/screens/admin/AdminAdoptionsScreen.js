@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -304,12 +305,81 @@ const AdminAdoptionsScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total Pengajuan</Text>
-        <Text style={styles.summaryNumber}>{requests.length}</Text>
-        <Text style={styles.summaryDescription}>
-          Seluruh pengajuan adopsi yang masuk ke PetPal
-        </Text>
+      {/* STATISTIK PENGAJUAN ADOPSI */}
+      <View style={styles.statsGrid}>
+        <TouchableOpacity
+          style={[
+            styles.statCard,
+            activeFilter === 'all' && styles.statCardActive,
+          ]}
+          onPress={() => setActiveFilter('all')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.statIconBox, { backgroundColor: '#FFF0F0' }]}>
+            <Ionicons name="documents-outline" size={20} color="#FF6268" />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={styles.statNumber}>{requests.length}</Text>
+            <Text style={styles.statLabel}>Total Pengajuan</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.statCard,
+            activeFilter === 'pending' && styles.statCardActive,
+          ]}
+          onPress={() => setActiveFilter('pending')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.statIconBox, { backgroundColor: '#FFF4DF' }]}>
+            <Ionicons name="time-outline" size={20} color="#B7791F" />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statNumber, { color: '#B7791F' }]}>
+              {getCount('pending')}
+            </Text>
+            <Text style={styles.statLabel}>Menunggu</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.statCard,
+            activeFilter === 'approved' && styles.statCardActive,
+          ]}
+          onPress={() => setActiveFilter('approved')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.statIconBox, { backgroundColor: '#E6F7EC' }]}>
+            <Ionicons name="checkmark-circle-outline" size={20} color="#25834B" />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statNumber, { color: '#25834B' }]}>
+              {getCount('approved')}
+            </Text>
+            <Text style={styles.statLabel}>Diterima</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.statCard,
+            activeFilter === 'rejected' && styles.statCardActive,
+          ]}
+          onPress={() => setActiveFilter('rejected')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.statIconBox, { backgroundColor: '#FCE8E8' }]}>
+            <Ionicons name="close-circle-outline" size={20} color="#D94A4A" />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statNumber, { color: '#D94A4A' }]}>
+              {getCount('rejected')}
+            </Text>
+            <Text style={styles.statLabel}>Ditolak</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -592,30 +662,61 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  summaryCard: {
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+
+  statCard: {
     backgroundColor: '#FFFFFF',
-    margin: 16,
-    padding: 18,
-    borderRadius: 14,
-    elevation: 2,
+    width: '48.5%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EEEEEE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
 
-  summaryLabel: {
-    fontSize: 13,
-    color: '#777777',
+  statCardActive: {
+    borderColor: '#FF6268',
+    backgroundColor: '#FFFAFA',
   },
 
-  summaryNumber: {
-    fontSize: 30,
+  statIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  statContent: {
+    flex: 1,
+  },
+
+  statNumber: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6268',
-    marginTop: 5,
+    color: '#252525',
   },
 
-  summaryDescription: {
-    fontSize: 12,
-    color: '#999999',
-    marginTop: 3,
+  statLabel: {
+    fontSize: 11,
+    color: '#777777',
+    marginTop: 1,
+    fontWeight: '500',
   },
 
   filterScroll: {
