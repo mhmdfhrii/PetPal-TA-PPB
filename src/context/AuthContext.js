@@ -14,7 +14,51 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchUserProfile = async (currentUser) => {
+    if (!currentUser?.id) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, address, avatar_url')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[AUTH] Fetch Profile Error:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[AUTH] Fetch Profile Exception:', error);
+      return null;
+    }
+  };
+
+  const refreshProfile = async (userId) => {
+    const targetId = userId || user?.id;
+    if (!targetId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, address, avatar_url')
+        .eq('id', targetId)
+        .maybeSingle();
+
+      if (!error && data) {
+        setProfile(data);
+        return data;
+      }
+    } catch (error) {
+      console.error('[AUTH] Refresh Profile Exception:', error);
+    }
+    return null;
+  };
 
   const fetchUserRole = async (currentUser) => {
     if (!currentUser?.id) {
@@ -72,19 +116,25 @@ export function AuthProvider({ children }) {
         console.log('[AUTH] Session User:', currentUser?.email);
 
         if (currentUser) {
-          const currentRole = await fetchUserRole(currentUser);
+          const [currentRole, currentProfile] = await Promise.all([
+            fetchUserRole(currentUser),
+            fetchUserProfile(currentUser),
+          ]);
 
           if (mounted) {
             setRole(currentRole);
+            setProfile(currentProfile);
           }
         } else {
           setRole(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('[AUTH] Initialize Error:', error);
 
         if (mounted) {
           setRole(null);
+          setProfile(null);
         }
       } finally {
         if (mounted) {
@@ -114,18 +164,24 @@ export function AuthProvider({ children }) {
 
         if (!currentUser) {
           setRole(null);
+          setProfile(null);
           setLoading(false);
           return;
         }
 
         setRole(null);
+        setProfile(null);
         setLoading(true);
 
         roleTimer = setTimeout(async () => {
-          const currentRole = await fetchUserRole(currentUser);
+          const [currentRole, currentProfile] = await Promise.all([
+            fetchUserRole(currentUser),
+            fetchUserProfile(currentUser),
+          ]);
 
           if (mounted) {
             setRole(currentRole);
+            setProfile(currentProfile);
             setLoading(false);
           }
         }, 0);
@@ -153,6 +209,7 @@ export function AuthProvider({ children }) {
     setSession(null);
     setUser(null);
     setRole(null);
+    setProfile(null);
   };
 
   return (
@@ -161,6 +218,9 @@ export function AuthProvider({ children }) {
         session,
         user,
         role,
+        profile,
+        setProfile,
+        refreshProfile,
         loading,
         signOut,
       }}

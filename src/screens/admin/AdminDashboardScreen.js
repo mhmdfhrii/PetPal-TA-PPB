@@ -25,6 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 
 import {
   getAnimals,
+  getShelters,
   createAdminAnimal,
   updateAdminAnimal,
   deleteAdminAnimal,
@@ -43,6 +44,7 @@ const initialForm = {
   location: '',
   description: '',
   is_available: true,
+  shelter_id: '',
 };
 
 // ========================================
@@ -53,6 +55,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const { user, session, signOut } = useAuth();
 
   const [animals, setAnimals] = useState([]);
+  const [shelters, setShelters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -63,15 +66,19 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [selectedImage, setSelectedImage] = useState(null);
 
   // ========================================
-  // LOAD DATA HEWAN
+  // LOAD DATA HEWAN & SHELTER
   // ========================================
 
   const loadAnimals = async () => {
     try {
       setLoading(true);
 
-      const data = await getAnimals();
-      setAnimals(data);
+      const [animalsData, sheltersData] = await Promise.all([
+        getAnimals(),
+        getShelters().catch(() => []),
+      ]);
+      setAnimals(animalsData);
+      setShelters(sheltersData || []);
     } catch (error) {
       console.error('Load Animals Error:', error);
 
@@ -118,6 +125,7 @@ const AdminDashboardScreen = ({ navigation }) => {
       location: animal.location || '',
       description: animal.description || '',
       is_available: animal.is_available ?? true,
+      shelter_id: animal.shelter_id ? String(animal.shelter_id) : '',
     });
 
     setSelectedImage(null);
@@ -268,6 +276,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         location: form.location.trim(),
         description: form.description.trim(),
         is_available: form.is_available,
+        shelter_id: form.shelter_id ? Number(form.shelter_id) : null,
       };
 
       if (editingAnimal) {
@@ -451,7 +460,9 @@ const AdminDashboardScreen = ({ navigation }) => {
         </View>
 
         <Text style={styles.animalLocation}>
-          {item.location || 'Lokasi belum diisi'}
+          {item.shelters?.name
+            ? `🏠 ${item.shelters.name} • ${item.location}`
+            : (item.location || 'Lokasi belum diisi')}
         </Text>
 
         <View style={styles.cardActions}>
@@ -797,6 +808,66 @@ const AdminDashboardScreen = ({ navigation }) => {
                   'location',
                   'Contoh: Semarang'
                 )}
+
+                <Text style={styles.inputLabel}>
+                  Shelter Penampungan (Opsional)
+                </Text>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.shelterPickerRow}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.shelterPickerOption,
+                      (!form.shelter_id || form.shelter_id === '') &&
+                        styles.shelterPickerOptionActive,
+                    ]}
+                    onPress={() => updateForm('shelter_id', '')}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.shelterPickerText,
+                        (!form.shelter_id || form.shelter_id === '') &&
+                          styles.shelterPickerTextActive,
+                      ]}
+                    >
+                      Tanpa Shelter (Independen)
+                    </Text>
+                  </TouchableOpacity>
+
+                  {shelters.map((shelterItem) => {
+                    const isSelected =
+                      String(form.shelter_id) === String(shelterItem.id);
+                    return (
+                      <TouchableOpacity
+                        key={shelterItem.id}
+                        style={[
+                          styles.shelterPickerOption,
+                          isSelected && styles.shelterPickerOptionActive,
+                        ]}
+                        onPress={() => {
+                          updateForm('shelter_id', String(shelterItem.id));
+                          if (!form.location && shelterItem.location) {
+                            updateForm('location', shelterItem.location);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.shelterPickerText,
+                            isSelected && styles.shelterPickerTextActive,
+                          ]}
+                        >
+                          🏠 {shelterItem.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
 
                 {renderInput(
                   'Deskripsi',
@@ -1335,6 +1406,37 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#888888',
     fontWeight: '600',
+  },
+
+  shelterPickerRow: {
+    gap: 8,
+    paddingVertical: 5,
+    marginBottom: 15,
+  },
+
+  shelterPickerOption: {
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+
+  shelterPickerOptionActive: {
+    backgroundColor: '#FFF0F0',
+    borderColor: '#FF6268',
+  },
+
+  shelterPickerText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+
+  shelterPickerTextActive: {
+    color: '#FF6268',
+    fontWeight: '700',
   },
 });
 

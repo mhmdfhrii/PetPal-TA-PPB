@@ -43,6 +43,7 @@ import { FavoritesProvider } from './src/context/FavoritesContext';
 import FavoritesScreen from './src/screens/favorites/FavoritesScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import AboutScreen from './src/screens/profile/AboutScreen';
+import HelpSupportScreen from './src/screens/profile/HelpSupportScreen';
 import AdoptionFormScreen from './src/screens/animals/AdoptionFormScreen';
 import AdoptionRequestsScreen from './src/screens/animals/AdoptionRequestsScreen';
 import UploadPetScreen from './src/screens/animals/UploadPetScreen';
@@ -603,6 +604,17 @@ function AuthenticatedStack() {
         options={{
           headerShown: true,
           title: 'About PetPal',
+          headerTitleAlign: 'center',
+          headerTintColor: '#FF6268',
+        }}
+      />
+
+      <Stack.Screen
+        name="HelpSupport"
+        component={HelpSupportScreen}
+        options={{
+          headerShown: true,
+          title: 'Help & Support',
           headerTitleAlign: 'center',
           headerTintColor: '#FF6268',
         }}

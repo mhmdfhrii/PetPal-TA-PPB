@@ -110,10 +110,33 @@ router.get(
 
       if (error) throw error;
 
+      // Hitung jumlah hewan yang terhubung secara dinamis dari database
+      let petCountMap = {};
+      try {
+        const { data: animalsList } = await supabase
+          .from('animals')
+          .select('id, shelter_id');
+
+        if (animalsList) {
+          animalsList.forEach((a) => {
+            if (a.shelter_id) {
+              petCountMap[a.shelter_id] = (petCountMap[a.shelter_id] || 0) + 1;
+            }
+          });
+        }
+      } catch (countErr) {
+        console.warn('Pet count lookup warning:', countErr.message);
+      }
+
+      const formattedData = (data || []).map((shelter) => ({
+        ...shelter,
+        pets_count: petCountMap[shelter.id] || 0,
+      }));
+
       return res.status(200).json({
         status: 'success',
-        total: data.length,
-        data,
+        total: formattedData.length,
+        data: formattedData,
       });
     } catch (error) {
       console.error('Admin Get Shelters Error:', error);
@@ -379,10 +402,33 @@ router.get('/', async (req, res) => {
 
     if (error) throw error;
 
+    // Hitung jumlah hewan yang terhubung secara dinamis dari database
+    let petCountMap = {};
+    try {
+      const { data: animalsList } = await supabase
+        .from('animals')
+        .select('id, shelter_id');
+
+      if (animalsList) {
+        animalsList.forEach((a) => {
+          if (a.shelter_id) {
+            petCountMap[a.shelter_id] = (petCountMap[a.shelter_id] || 0) + 1;
+          }
+        });
+      }
+    } catch (countErr) {
+      console.warn('Public pet count lookup warning:', countErr.message);
+    }
+
+    const formattedData = (data || []).map((shelter) => ({
+      ...shelter,
+      pets_count: petCountMap[shelter.id] || 0,
+    }));
+
     return res.status(200).json({
       status: 'success',
-      total: data.length,
-      data,
+      total: formattedData.length,
+      data: formattedData,
     });
   } catch (error) {
     console.error('Get Shelters Error:', error.message);
@@ -424,9 +470,29 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Ambil daftar hewan yang terdaftar pada shelter ini secara dinamis
+    let shelterAnimals = [];
+    try {
+      const { data: animalsList, error: animalsError } = await supabase
+        .from('animals')
+        .select('*')
+        .eq('shelter_id', id)
+        .order('created_at', { ascending: false });
+
+      if (!animalsError && animalsList) {
+        shelterAnimals = animalsList;
+      }
+    } catch (animalErr) {
+      console.warn('Fetch shelter animals warning:', animalErr.message);
+    }
+
     return res.status(200).json({
       status: 'success',
-      data,
+      data: {
+        ...data,
+        pets_count: shelterAnimals.length,
+        animals: shelterAnimals,
+      },
     });
   } catch (error) {
     console.error('Get Shelter Detail Error:', error.message);

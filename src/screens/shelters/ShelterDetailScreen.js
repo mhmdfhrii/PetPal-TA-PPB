@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
@@ -10,9 +10,11 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+import { getShelterById } from '../../services/api';
 
 const COLORS = {
   primary: '#111111',
@@ -55,17 +57,56 @@ export default function ShelterDetailScreen({ navigation, route }) {
     );
   }
 
+  const [shelterDetail, setShelterDetail] = useState(shelter);
+  const [shelterAnimals, setShelterAnimals] = useState([]);
+  const [loadingPets, setLoadingPets] = useState(true);
+
+  // Mengambil data detail shelter & hewan terkait dari REST API
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDetail = async () => {
+      if (!shelter?.id) {
+        setLoadingPets(false);
+        return;
+      }
+
+      try {
+        setLoadingPets(true);
+        const data = await getShelterById(shelter.id);
+        if (isMounted && data) {
+          setShelterDetail(data);
+          setShelterAnimals(data.animals || []);
+        }
+      } catch (err) {
+        console.warn('Fetch shelter detail error:', err.message);
+      } finally {
+        if (isMounted) setLoadingPets(false);
+      }
+    };
+
+    loadDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [shelter?.id]);
+
   // Mengambil informasi shelter
-  const shelterName = shelter.name || 'Unnamed Shelter';
-  const shelterLocation = shelter.location || 'Location not available';
+  const activeShelter = shelterDetail || shelter;
+  const shelterName = activeShelter.name || 'Unnamed Shelter';
+  const shelterLocation = activeShelter.location || 'Location not available';
   const shelterDescription =
-    shelter.description || 'No description available.';
-  const shelterImage = shelter.image || shelter.image_url;
-  const shelterPhone = shelter.phone || shelter.contact || '-';
-  const shelterAddress = shelter.address || shelter.location || '-';
-  const shelterPets = shelter.pets ?? 0;
-  const shelterFacilities = Array.isArray(shelter.facilities)
-    ? shelter.facilities
+    activeShelter.description || 'No description available.';
+  const shelterImage = activeShelter.image || activeShelter.image_url;
+  const shelterPhone = activeShelter.phone || activeShelter.contact || '-';
+  const shelterAddress = activeShelter.address || activeShelter.location || '-';
+  const shelterPets =
+    activeShelter.pets_count !== undefined
+      ? activeShelter.pets_count
+      : activeShelter.pets ?? shelterAnimals.length;
+  const shelterFacilities = Array.isArray(activeShelter.facilities)
+    ? activeShelter.facilities
     : [];
 
   // Navigasi ke katalog Animals
@@ -225,6 +266,95 @@ export default function ShelterDetailScreen({ navigation, route }) {
                 color={COLORS.gray}
               />
             </TouchableOpacity>
+          </View>
+
+          {/* PETS IN THIS SHELTER */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>
+                Hewan di Shelter Ini ({shelterPets})
+              </Text>
+            </View>
+
+            {loadingPets ? (
+              <View style={styles.petsLoadingContainer}>
+                <ActivityIndicator size="small" color={COLORS.accent} />
+                <Text style={styles.petsLoadingText}>Memuat hewan...</Text>
+              </View>
+            ) : shelterAnimals.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.shelterPetsScroll}
+              >
+                {shelterAnimals.map((pet) => (
+                  <TouchableOpacity
+                    key={pet.id}
+                    style={styles.petCard}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      navigation.navigate('AnimalDetail', {
+                        animal: {
+                          ...pet,
+                          image: pet.image_url,
+                        },
+                      })
+                    }
+                  >
+                    <View style={styles.petImageContainer}>
+                      {pet.image_url ? (
+                        <Image
+                          source={{ uri: pet.image_url }}
+                          style={styles.petCardImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.petPlaceholder}>
+                          <Ionicons name="paw" size={30} color={COLORS.gray} />
+                        </View>
+                      )}
+                      <View
+                        style={[
+                          styles.petAvailabilityBadge,
+                          {
+                            backgroundColor:
+                              pet.is_available !== false ? '#E6F7EC' : '#FCE8E8',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.petAvailabilityText,
+                            {
+                              color:
+                                pet.is_available !== false ? '#25834B' : '#D94A4A',
+                            },
+                          ]}
+                        >
+                          {pet.is_available !== false ? 'Tersedia' : 'Diadopsi'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.petCardInfo}>
+                      <Text style={styles.petCardName} numberOfLines={1}>
+                        {pet.name}
+                      </Text>
+                      <Text style={styles.petCardBreed} numberOfLines={1}>
+                        {pet.breed} • {pet.category}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyPetsContainer}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.gray} />
+                <Text style={styles.emptyPetsText}>
+                  Belum ada hewan yang terdaftar di shelter ini.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* FACILITIES */}
@@ -481,5 +611,109 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 12,
     fontWeight: '700',
+  },
+
+  // SHELTER PETS SECTION STYLES
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  petsLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    gap: 8,
+  },
+
+  petsLoadingText: {
+    fontSize: 12,
+    color: COLORS.gray,
+  },
+
+  shelterPetsScroll: {
+    gap: 12,
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+
+  petCard: {
+    width: 140,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+
+  petImageContainer: {
+    width: '100%',
+    height: 110,
+    backgroundColor: COLORS.secondary,
+    position: 'relative',
+  },
+
+  petCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  petPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  petAvailabilityBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+
+  petAvailabilityText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  petCardInfo: {
+    padding: 10,
+  },
+
+  petCardName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  petCardBreed: {
+    fontSize: 11,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
+
+  emptyPetsContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+
+  emptyPetsText: {
+    fontSize: 12,
+    color: COLORS.gray,
+    textAlign: 'center',
   },
 });
