@@ -553,20 +553,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-    return res.status(200).json({
-      status: 'success',
-      data,
-    });
-  } catch (error) {
-    console.error('Get Animal Detail Error:', error);
-
-    return res.status(500).json({
-      status: 'error',
-      message: 'Gagal mengambil detail hewan.',
-    });
-  }
-});
-
 // ========================================
 // ERROR HANDLER MULTER
 // ========================================
