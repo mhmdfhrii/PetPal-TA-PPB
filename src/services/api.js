@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
-const BASE_URL = 'http://10.131.64.87:5000/api';
+const BASE_URL = 'http://192.168.18.197:5000/api';
 
 // ========================================
 // HELPER RESPONSE
