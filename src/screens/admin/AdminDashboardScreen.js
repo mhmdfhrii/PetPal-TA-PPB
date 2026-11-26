@@ -327,6 +327,62 @@ const AdminDashboardScreen = ({ navigation }) => {
   // ========================================
 
   const handleDelete = (animal) => {
+    const doDelete = async () => {
+      try {
+        const accessToken = session?.access_token;
+
+        if (!accessToken) {
+          if (Platform.OS === 'web') {
+            window.alert('Sesi Berakhir. Silakan login kembali.');
+          } else {
+            Alert.alert(
+              'Sesi Berakhir',
+              'Silakan login kembali.'
+            );
+          }
+          return;
+        }
+
+        await deleteAdminAnimal(
+          animal.id,
+          accessToken
+        );
+
+        if (Platform.OS === 'web') {
+          window.alert('Data hewan berhasil dihapus.');
+        } else {
+          Alert.alert(
+            'Berhasil',
+            'Data hewan berhasil dihapus.'
+          );
+        }
+
+        await loadAnimals();
+      } catch (error) {
+        console.error('Delete Animal Error:', error);
+
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Tidak dapat menghapus data hewan.');
+        } else {
+          Alert.alert(
+            'Gagal',
+            error.message || 'Tidak dapat menghapus data hewan.'
+          );
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm(`Apakah kamu yakin ingin menghapus ${animal.name}?`)
+          : true;
+      if (confirmed) {
+        doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Hapus Data Hewan',
       `Apakah kamu yakin ingin menghapus ${animal.name}?`,
@@ -338,38 +394,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         {
           text: 'Hapus',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              const accessToken = session?.access_token;
-
-              if (!accessToken) {
-                Alert.alert(
-                  'Sesi Berakhir',
-                  'Silakan login kembali.'
-                );
-                return;
-              }
-
-              await deleteAdminAnimal(
-                animal.id,
-                accessToken
-              );
-
-              Alert.alert(
-                'Berhasil',
-                'Data hewan berhasil dihapus.'
-              );
-
-              await loadAnimals();
-            } catch (error) {
-              console.error('Delete Animal Error:', error);
-
-              Alert.alert(
-                'Gagal',
-                error.message || 'Tidak dapat menghapus data hewan.'
-              );
-            }
-          },
+          onPress: doDelete,
         },
       ]
     );
@@ -380,6 +405,29 @@ const AdminDashboardScreen = ({ navigation }) => {
   // ========================================
 
   const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        await signOut();
+      } catch (error) {
+        if (Platform.OS === 'web') {
+          window.alert('Tidak dapat keluar dari akun.');
+        } else {
+          Alert.alert('Gagal', 'Tidak dapat keluar dari akun.');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm('Apakah kamu yakin ingin keluar dari akun admin?')
+          : true;
+      if (confirmed) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert(
       'Keluar',
       'Apakah kamu yakin ingin keluar dari akun admin?',
@@ -391,13 +439,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         {
           text: 'Keluar',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-            } catch (error) {
-              Alert.alert('Gagal', 'Tidak dapat keluar dari akun.');
-            }
-          },
+          onPress: doLogout,
         },
       ]
     );

@@ -290,6 +290,52 @@ const AdminSheltersScreen = ({ navigation }) => {
   // ========================================
 
   const handleDelete = (shelter) => {
+    const doDelete = async () => {
+      try {
+        if (!accessToken) {
+          throw new Error('Sesi admin tidak ditemukan.');
+        }
+
+        await deleteAdminShelter(
+          shelter.id,
+          accessToken
+        );
+
+        if (Platform.OS === 'web') {
+          window.alert('Shelter berhasil dinonaktifkan.');
+        } else {
+          Alert.alert(
+            'Berhasil',
+            'Shelter berhasil dinonaktifkan.'
+          );
+        }
+
+        await loadShelters();
+      } catch (error) {
+        console.error('Delete Shelter Error:', error);
+
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Tidak dapat menonaktifkan shelter.');
+        } else {
+          Alert.alert(
+            'Gagal',
+            error.message || 'Tidak dapat menonaktifkan shelter.'
+          );
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm(`Apakah kamu yakin ingin menonaktifkan ${shelter.name}?`)
+          : true;
+      if (confirmed) {
+        doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Nonaktifkan Shelter',
       `Apakah kamu yakin ingin menonaktifkan ${shelter.name}?`,
@@ -301,32 +347,7 @@ const AdminSheltersScreen = ({ navigation }) => {
         {
           text: 'Nonaktifkan',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              if (!accessToken) {
-                throw new Error('Sesi admin tidak ditemukan.');
-              }
-
-              await deleteAdminShelter(
-                shelter.id,
-                accessToken
-              );
-
-              Alert.alert(
-                'Berhasil',
-                'Shelter berhasil dinonaktifkan.'
-              );
-
-              await loadShelters();
-            } catch (error) {
-              console.error('Delete Shelter Error:', error);
-
-              Alert.alert(
-                'Gagal',
-                error.message || 'Tidak dapat menonaktifkan shelter.'
-              );
-            }
-          },
+          onPress: doDelete,
         },
       ]
     );

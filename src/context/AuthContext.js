@@ -200,16 +200,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('[AUTH] Supabase signOut error:', error);
+      }
+    } catch (error) {
+      console.error('[AUTH] Supabase signOut exception:', error);
+    } finally {
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setProfile(null);
     }
-
-    setSession(null);
-    setUser(null);
-    setRole(null);
-    setProfile(null);
   };
 
   return (
