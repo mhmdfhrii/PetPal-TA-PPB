@@ -13,6 +13,7 @@ import {
   Modal,
   ScrollView,
   StatusBar,
+  Platform,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -126,6 +127,62 @@ const AdminAdoptionsScreen = ({ navigation }) => {
 
     const statusText = STATUS_LABELS[newStatus];
 
+    const doUpdate = async () => {
+      try {
+        setUpdating(true);
+
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error('Sesi admin tidak ditemukan.');
+        }
+
+        await updateAdminAdoptionStatus(
+          selectedRequest.id,
+          newStatus,
+          token
+        );
+
+        setDetailVisible(false);
+        setSelectedRequest(null);
+
+        await loadRequests(false);
+
+        if (Platform.OS === 'web') {
+          window.alert('Status pengajuan berhasil diperbarui.');
+        } else {
+          Alert.alert(
+            'Berhasil',
+            'Status pengajuan berhasil diperbarui.'
+          );
+        }
+      } catch (error) {
+        console.error('Update Adoption Status Error:', error);
+
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Tidak dapat mengubah status pengajuan.');
+        } else {
+          Alert.alert(
+            'Gagal',
+            error.message || 'Tidak dapat mengubah status pengajuan.'
+          );
+        }
+      } finally {
+        setUpdating(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm(`Ubah status pengajuan ini menjadi "${statusText}"?`)
+          : true;
+      if (confirmed) {
+        doUpdate();
+      }
+      return;
+    }
+
     Alert.alert(
       'Konfirmasi Status',
       `Ubah status pengajuan ini menjadi "${statusText}"?`,
@@ -136,48 +193,65 @@ const AdminAdoptionsScreen = ({ navigation }) => {
         },
         {
           text: 'Ya, Ubah',
-          onPress: async () => {
-            try {
-              setUpdating(true);
-
-              const token = session?.access_token;
-
-              if (!token) {
-                throw new Error('Sesi admin tidak ditemukan.');
-              }
-
-              await updateAdminAdoptionStatus(
-                selectedRequest.id,
-                newStatus,
-                token
-              );
-
-              setDetailVisible(false);
-              setSelectedRequest(null);
-
-              await loadRequests(false);
-
-              Alert.alert(
-                'Berhasil',
-                'Status pengajuan berhasil diperbarui.'
-              );
-            } catch (error) {
-              console.error('Update Adoption Status Error:', error);
-
-              Alert.alert(
-                'Gagal',
-                error.message || 'Tidak dapat mengubah status pengajuan.'
-              );
-            } finally {
-              setUpdating(false);
-            }
-          },
+          onPress: doUpdate,
         },
       ]
     );
   };
 
   const handleDelete = (item) => {
+    const doDelete = async () => {
+      try {
+        setUpdating(true);
+
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error('Sesi admin tidak ditemukan.');
+        }
+
+        await deleteAdminAdoption(item.id, token);
+
+        setDetailVisible(false);
+        setSelectedRequest(null);
+
+        await loadRequests(false);
+
+        if (Platform.OS === 'web') {
+          window.alert('Pengajuan adopsi berhasil dihapus.');
+        } else {
+          Alert.alert(
+            'Berhasil',
+            'Pengajuan adopsi berhasil dihapus.'
+          );
+        }
+      } catch (error) {
+        console.error('Delete Adoption Error:', error);
+
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Tidak dapat menghapus pengajuan.');
+        } else {
+          Alert.alert(
+            'Gagal',
+            error.message || 'Tidak dapat menghapus pengajuan.'
+          );
+        }
+      } finally {
+        setUpdating(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm(`Apakah kamu yakin ingin menghapus pengajuan dari ${item.applicant_name}?`)
+          : true;
+      if (confirmed) {
+        doDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Hapus Pengajuan',
       `Apakah kamu yakin ingin menghapus pengajuan dari ${item.applicant_name}?`,
@@ -189,38 +263,7 @@ const AdminAdoptionsScreen = ({ navigation }) => {
         {
           text: 'Hapus',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              setUpdating(true);
-
-              const token = session?.access_token;
-
-              if (!token) {
-                throw new Error('Sesi admin tidak ditemukan.');
-              }
-
-              await deleteAdminAdoption(item.id, token);
-
-              setDetailVisible(false);
-              setSelectedRequest(null);
-
-              await loadRequests(false);
-
-              Alert.alert(
-                'Berhasil',
-                'Pengajuan adopsi berhasil dihapus.'
-              );
-            } catch (error) {
-              console.error('Delete Adoption Error:', error);
-
-              Alert.alert(
-                'Gagal',
-                error.message || 'Tidak dapat menghapus pengajuan.'
-              );
-            } finally {
-              setUpdating(false);
-            }
-          },
+          onPress: doDelete,
         },
       ]
     );

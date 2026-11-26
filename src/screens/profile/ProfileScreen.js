@@ -13,6 +13,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Image,
+  Platform,
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -350,25 +351,42 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        setLoggingOut(true);
+        await signOut();
+      } catch (error) {
+        console.error('Logout Error:', error);
+        if (Platform.OS === 'web') {
+          window.alert(error.message || 'Tidak dapat keluar dari akun.');
+        } else {
+          Alert.alert(
+            'Logout Gagal',
+            error.message || 'Tidak dapat keluar dari akun.'
+          );
+        }
+      } finally {
+        setLoggingOut(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm('Apakah kamu yakin ingin keluar dari akun?')
+          : true;
+      if (confirmed) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert('Logout', 'Apakah kamu yakin ingin keluar dari akun?', [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            setLoggingOut(true);
-            await signOut();
-          } catch (error) {
-            console.error('Logout Error:', error);
-            Alert.alert(
-              'Logout Gagal',
-              error.message || 'Tidak dapat keluar dari akun.'
-            );
-          } finally {
-            setLoggingOut(false);
-          }
-        },
+        onPress: doLogout,
       },
     ]);
   };
