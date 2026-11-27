@@ -44,6 +44,7 @@ import FavoritesScreen from './src/screens/favorites/FavoritesScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import AboutScreen from './src/screens/profile/AboutScreen';
 import HelpSupportScreen from './src/screens/profile/HelpSupportScreen';
+import PetCareTutorialScreen from './src/screens/profile/PetCareTutorialScreen';
 import AdoptionFormScreen from './src/screens/animals/AdoptionFormScreen';
 import AdoptionRequestsScreen from './src/screens/animals/AdoptionRequestsScreen';
 import UploadPetScreen from './src/screens/animals/UploadPetScreen';
@@ -621,6 +622,17 @@ function AuthenticatedStack() {
       />
 
       <Stack.Screen
+        name="PetCareTutorial"
+        component={PetCareTutorialScreen}
+        options={{
+          headerShown: true,
+          title: 'Tutorial Merawat Hewan',
+          headerTitleAlign: 'center',
+          headerTintColor: '#FF6268',
+        }}
+      />
+
+      <Stack.Screen
         name="AdoptionForm"
         component={AdoptionFormScreen}
       />
@@ -659,6 +671,16 @@ function AuthenticatedStack() {
         <Stack.Screen
           name="AdminUsers"
           component={AdminUsersScreen}
+        />
+        <Stack.Screen
+          name="PetCareTutorial"
+          component={PetCareTutorialScreen}
+          options={{
+            headerShown: true,
+            title: 'Tutorial Merawat Hewan',
+            headerTitleAlign: 'center',
+            headerTintColor: '#FF6268',
+          }}
         />
       </Stack.Navigator>
     );

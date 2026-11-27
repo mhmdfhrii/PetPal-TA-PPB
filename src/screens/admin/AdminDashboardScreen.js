@@ -41,6 +41,7 @@ const initialForm = {
   category: '',
   age: '',
   gender: '',
+  weight: '',
   location: '',
   description: '',
   is_available: true,
@@ -122,6 +123,7 @@ const AdminDashboardScreen = ({ navigation }) => {
       category: animal.category || '',
       age: animal.age || '',
       gender: animal.gender || '',
+      weight: animal.weight || '',
       location: animal.location || '',
       description: animal.description || '',
       is_available: animal.is_available ?? true,
@@ -273,6 +275,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         category: form.category.trim(),
         age: form.age.trim(),
         gender: form.gender.trim(),
+        weight: form.weight ? form.weight.trim() : undefined,
         location: form.location.trim(),
         description: form.description.trim(),
         is_available: form.is_available,
@@ -843,6 +846,12 @@ const AdminDashboardScreen = ({ navigation }) => {
                   'Jenis Kelamin',
                   'gender',
                   'Contoh: Male atau Female'
+                )}
+
+                {renderInput(
+                  'Berat Badan (Opsional)',
+                  'weight',
+                  'Contoh: 4.5 kg'
                 )}
 
                 {renderInput(

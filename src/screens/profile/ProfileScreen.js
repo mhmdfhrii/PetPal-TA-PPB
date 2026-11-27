@@ -563,6 +563,14 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.menuCard}>
             <MenuItem
+              icon="book-open-page-variant-outline"
+              title="Tutorial Cara Merawat Hewan"
+              onPress={() => navigation.navigate('PetCareTutorial')}
+            />
+
+            <View style={styles.menuDivider} />
+
+            <MenuItem
               icon="information-outline"
               title="About PetPal"
               onPress={() => navigation.navigate('About')}
