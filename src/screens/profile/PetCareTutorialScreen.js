@@ -214,7 +214,7 @@ const VIDEO_TUTORIALS = [
     duration: '8:45',
     thumbnail:
       'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600',
-    url: 'https://www.youtube.com/results?search_query=cara+merawat+kucing+pemula+lengkap',
+    url: 'https://www.youtube.com/watch?v=1uHqL8E7XpY',
     description:
       'Video komprehensif mengupas tuntas cara merawat kucing dari pemberian makan, vaksinasi, hingga grooming bulu.',
   },
@@ -229,7 +229,7 @@ const VIDEO_TUTORIALS = [
     duration: '0:58 (Shorts)',
     thumbnail:
       'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600',
-    url: 'https://www.tiktok.com/tag/catcare',
+    url: 'https://www.tiktok.com/@purina/video/7234676182855142698',
     description:
       'Video singkat dan padat mengenai hal-hal yang wajib dihindari dalam memelihara anabul kesayangan.',
   },
@@ -244,7 +244,7 @@ const VIDEO_TUTORIALS = [
     duration: '11:20',
     thumbnail:
       'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600',
-    url: 'https://www.youtube.com/results?search_query=cara+merawat+anjing+pemula+lengkap',
+    url: 'https://www.youtube.com/watch?v=peUVLEUj-AM',
     description:
       'Pelajari rutinitas harian anak anjing, teknik potty training, dan cara memilih pakan yang tepat.',
   },
@@ -259,7 +259,7 @@ const VIDEO_TUTORIALS = [
     duration: '0:45 (Shorts)',
     thumbnail:
       'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600',
-    url: 'https://www.tiktok.com/tag/dogtraining',
+    url: 'https://www.tiktok.com/@thepetcollective/video/7245892019488181550',
     description:
       'Daftar makanan sehari-hari yang beracun bagi anjing serta pertolongan pertama darurat.',
   },
@@ -274,7 +274,7 @@ const VIDEO_TUTORIALS = [
     duration: '7:15',
     thumbnail:
       'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=600',
-    url: 'https://www.youtube.com/results?search_query=cara+merawat+kelinci+agar+sehat+dan+tidak+bau',
+    url: 'https://www.youtube.com/watch?v=8y_l-uF9H7c',
     description:
       'Trik menjaga kebersihan kandang kelinci, jenis rumput hay terbaik, dan cara membuat kelinci jinak.',
   },
@@ -289,7 +289,7 @@ const VIDEO_TUTORIALS = [
     duration: '9:30',
     thumbnail:
       'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=600',
-    url: 'https://www.youtube.com/results?search_query=cara+merawat+burung+kicau+pemula',
+    url: 'https://www.youtube.com/watch?v=d_k8cW4GZ-c',
     description:
       'Cara menjemur, memandikan, dan memilih formula pakan biji terbaik agar burung selalu sehat dan rajin berkicau.',
   },
@@ -304,7 +304,7 @@ const VIDEO_TUTORIALS = [
     duration: '1:12 (Shorts)',
     thumbnail:
       'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600',
-    url: 'https://www.tiktok.com/tag/pettips',
+    url: 'https://www.tiktok.com/@petlabco/video/7228800100742188334',
     description:
       'Kenali bahasa tubuh dan gejala klinis saat anabul mengalami rasa sakit yang tidak mereka tunjukkan langsung.',
   },
