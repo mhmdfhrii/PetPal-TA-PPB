@@ -177,6 +177,7 @@ router.post(
         category,
         age,
         gender,
+        weight,
         location,
         description,
         is_available,
@@ -213,6 +214,7 @@ router.post(
         category,
         age,
         gender,
+        ...(weight && { weight }),
         location,
         description,
         image_url: uploadedImageUrl,
@@ -277,6 +279,7 @@ router.put(
         category,
         age,
         gender,
+        weight,
         location,
         description,
         is_available,
@@ -305,6 +308,7 @@ router.put(
       if (category !== undefined) updateData.category = category;
       if (age !== undefined) updateData.age = age;
       if (gender !== undefined) updateData.gender = gender;
+      if (weight !== undefined) updateData.weight = weight;
       if (location !== undefined) updateData.location = location;
       if (description !== undefined) {
         updateData.description = description;
@@ -468,6 +472,7 @@ router.post(
         category,
         age,
         gender,
+        ...(weight && { weight }),
         location,
         description,
         image_url: uploadedImageUrl,

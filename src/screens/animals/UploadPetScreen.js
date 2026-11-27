@@ -63,6 +63,7 @@ export default function UploadPetScreen({ navigation }) {
   const [category, setCategory] = useState('Dog');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('Male');
+  const [weight, setWeight] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
 
@@ -203,6 +204,7 @@ export default function UploadPetScreen({ navigation }) {
       category,
       age: age.trim(),
       gender,
+      weight: weight.trim() || undefined,
       location: location.trim(),
       description: description.trim(),
     };
@@ -425,6 +427,14 @@ export default function UploadPetScreen({ navigation }) {
             ))}
           </View>
         </View>
+
+        <FormInput
+          label="Weight (Berat Badan)"
+          value={weight}
+          onChangeText={setWeight}
+          placeholder="Example: 4.5 kg or 12 kg"
+          editable={!uploading}
+        />
 
         <FormInput
           label="Location"
